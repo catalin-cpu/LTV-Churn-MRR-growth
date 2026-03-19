@@ -43,231 +43,219 @@
     </style>
 </head>
 <body class="p-4 md:p-8">
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <!-- Header -->
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-slate-900">SaaS Migration Risk Calculator</h1>
-            <p class="text-slate-500">Analyze the LTV impact and churn thresholds of price increases or tier migrations.</p>
+        <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900">SaaS Migration Risk Calculator</h1>
+                <p class="text-slate-500">Modeling the "Migration Spike" vs. "Steady State" LTV recovery.</p>
+            </div>
+            <div class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm">
+                Cohort Refresh Model v2.1
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <!-- Left Column: Inputs -->
-            <div class="lg:col-span-1 space-y-6">
+            <div class="lg:col-span-4 space-y-6">
                 <div class="card p-6 border-t-4 border-slate-400">
                     <h2 class="text-lg font-semibold mb-4 border-b pb-2">Financial Baseline</h2>
                     <div class="space-y-4">
                         <div class="input-group">
                             <label for="currentMrr">Current MRR ($)</label>
-                            <input type="number" id="currentMrr" class="input-field" value="242000" step="1000">
+                            <input type="number" id="currentMrr" class="input-field" value="242000">
                         </div>
                         <div class="input-group">
-                            <label for="currentChurn">Current Monthly Churn (%)</label>
+                            <label for="currentChurn">Baseline Monthly Churn (%)</label>
                             <input type="number" id="currentChurn" class="input-field" value="2.5" step="0.1">
                         </div>
                     </div>
                 </div>
 
                 <div class="card p-6 border-t-4 border-blue-500">
-                    <h2 class="text-lg font-semibold mb-4 border-b pb-2">Migration Targets</h2>
+                    <h2 class="text-lg font-semibold mb-4 border-b pb-2">Migration Event</h2>
                     <div class="space-y-4">
                         <div class="input-group">
-                            <label for="mrrGain">Expected MRR Gain ($)</label>
-                            <input type="number" id="mrrGain" class="input-field" value="48400" step="500">
+                            <label for="mrrGain">Target MRR Gain ($)</label>
+                            <input type="number" id="mrrGain" class="input-field" value="48400">
                         </div>
                         <div class="input-group">
-                            <label for="newChurn">New Post-Migration Churn (%)</label>
-                            <input type="number" id="newChurn" class="input-field" value="4.0" step="0.1">
+                            <label for="spikeChurn">Spike Churn Rate (%) <span class="text-[10px] text-slate-400 font-normal italic">(During Migration)</span></label>
+                            <input type="number" id="spikeChurn" class="input-field" value="6.5" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="spikeDuration">Migration Window (Months)</label>
+                            <input type="number" id="spikeDuration" class="input-field" value="3">
+                        </div>
+                        <div class="input-group">
+                            <label for="steadyChurn">Expected Steady State Churn (%)</label>
+                            <input type="number" id="steadyChurn" class="input-field" value="2.8" step="0.1">
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Right Column: Results -->
-            <div class="lg:col-span-2 space-y-6">
+            <div class="lg:col-span-8 space-y-6">
                 <!-- Summary Metrics -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="card p-5 text-center">
-                        <p class="text-sm font-medium text-slate-500 uppercase">Baseline LTV</p>
-                        <p id="baselineLtvDisplay" class="text-2xl font-bold text-slate-800">$0.00</p>
+                    <div class="card p-5 border-b-4 border-slate-300">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Baseline LTV</p>
+                        <p id="baselineLtvDisplay" class="text-xl font-bold text-slate-800">$0.00</p>
                     </div>
-                    <div class="card p-5 text-center border-l-4 border-blue-500">
-                        <p class="text-sm font-medium text-slate-500 uppercase">New LTV</p>
-                        <p id="newLtvDisplay" class="text-2xl font-bold text-slate-800">$0.00</p>
+                    <div class="card p-5 border-b-4 border-red-400">
+                        <p class="text-[10px] font-bold text-red-400 uppercase tracking-widest">Spike Window LTV</p>
+                        <p id="spikeLtvDisplay" class="text-xl font-bold text-slate-800">$0.00</p>
                     </div>
-                    <div class="card p-5 text-center">
-                        <p class="text-sm font-medium text-slate-500 uppercase">LTV Impact</p>
-                        <p id="ltvImpactDisplay" class="text-2xl font-bold">$0.00</p>
+                    <div class="card p-5 border-b-4 border-green-500">
+                        <p class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Steady State LTV</p>
+                        <p id="steadyLtvDisplay" class="text-xl font-bold text-slate-800">$0.00</p>
                     </div>
                 </div>
 
-                <!-- Reality Check Section -->
-                <div id="realityCheckContainer" class="card p-6 border-l-4 border-amber-500 bg-amber-50/30">
-                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Migration Reality Check
-                    </h2>
+                <!-- Recovery Analysis -->
+                <div class="card p-6 border-l-4 border-blue-600">
+                    <h2 class="text-lg font-semibold mb-4">Cohort Refresh Reality Check</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Revenue Expansion vs. Churn Inflation</p>
-                            <div class="space-y-3">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-sm text-slate-600">Price Multiplier:</span>
-                                    <span id="revMultDisplay" class="font-mono font-bold text-slate-800">1.00x</span>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Net Asset Impact</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-slate-600">Total Base Attrition (Window):</span>
+                                        <span id="attritionImpact" class="font-bold text-red-600">0%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                        <div id="attritionBar" class="bg-red-500 h-full transition-all duration-500" style="width: 0%"></div>
+                                    </div>
                                 </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-sm text-slate-600">Churn Multiplier:</span>
-                                    <span id="churnMultDisplay" class="font-mono font-bold text-slate-800">1.00x</span>
+                                <div class="flex justify-between items-center py-2 border-t border-slate-100">
+                                    <span class="text-sm text-slate-600">Equity Delta (Steady State):</span>
+                                    <span id="equityDelta" class="font-bold text-lg">+0.00%</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="flex flex-col justify-center border-t md:border-t-0 md:border-l border-amber-200 pt-4 md:pt-0 md:pl-8">
-                            <p id="realityScoreLabel" class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Reality Score</p>
-                            <div id="realityScoreBadge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase w-fit mb-2">
-                                Healthy
-                            </div>
-                            <p id="realitySummary" class="text-xs text-slate-600 leading-relaxed italic">
-                                Comparing if the revenue increase is proportional to the increased risk of attrition.
+                        <div class="bg-slate-50 p-4 rounded-lg flex flex-col justify-center">
+                            <h3 class="text-xs font-bold text-slate-500 uppercase mb-2">Analyst View</h3>
+                            <p id="analystView" class="text-sm text-slate-700 leading-relaxed italic">
+                                Loading model...
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Visual Risk Analysis -->
+                <!-- Risk Meter -->
                 <div class="card p-6">
-                    <h2 class="text-lg font-semibold mb-6">Churn Risk Analysis</h2>
-                    
-                    <div class="mb-8">
+                    <h2 class="text-lg font-semibold mb-6">Breakeven Tolerance (Steady State)</h2>
+                    <div class="mb-4">
                         <div class="flex justify-between text-sm font-medium mb-2">
-                            <span>Risk Meter: Churn Tolerance</span>
-                            <span id="breakevenDisplay" class="text-slate-600">Breakeven: 0.00%</span>
+                            <span>Sustainable Churn Limit</span>
+                            <span id="breakevenDisplay" class="text-blue-600 font-bold">0.00%</span>
                         </div>
                         <div class="relative w-full h-4 rounded-full bg-slate-200 overflow-hidden">
                             <div class="risk-gradient absolute inset-0 opacity-30"></div>
                             <div id="riskPointer" class="absolute top-0 w-1 h-full bg-slate-900 transition-all duration-500" style="left: 0%"></div>
                         </div>
-                        <div class="flex justify-between text-[10px] text-slate-400 mt-1 uppercase tracking-wider">
-                            <span>Safe</span>
-                            <span>Breakeven Threshold</span>
-                            <span>Danger</span>
+                    </div>
+                    
+                    <div id="recommendationCard" class="mt-6 p-4 rounded-lg border flex gap-4 items-start transition-all duration-300">
+                        <div id="recIcon" class="mt-1"></div>
+                        <div>
+                            <h3 id="recTitle" class="font-bold text-sm mb-1">Recommendation</h3>
+                            <p id="recBody" class="text-sm leading-relaxed text-slate-600">...</p>
                         </div>
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-slate-50 p-4 rounded-lg">
-                            <h3 class="text-sm font-bold text-slate-700 mb-2">6% Quarterly Net Growth Check</h3>
-                            <p class="text-xs text-slate-500 mb-3">Target: $ (Current MRR + Gain) * 1.06 in 90 days.</p>
-                            <div class="text-lg font-bold text-blue-700">
-                                <span id="growthTargetDisplay">$0.00</span> 
-                                <span class="text-xs font-normal text-slate-500">/ mo Gross New</span>
-                            </div>
-                            <p class="text-[10px] text-slate-400 mt-1">Required monthly new revenue to offset new churn and hit 6% net gain.</p>
-                        </div>
-
-                        <div id="recommendationCard" class="p-4 rounded-lg transition-colors">
-                            <h3 class="text-sm font-bold mb-2">CPO Recommendation</h3>
-                            <p id="recommendationText" class="text-sm leading-relaxed">...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Logic Breakdown (Educational) -->
-                <div class="bg-blue-50 border border-blue-100 p-4 rounded-lg">
-                    <p class="text-xs text-blue-700 font-medium italic">
-                        * Note: Breakeven Churn Rate represents the ceiling where the increased revenue per user no longer compensates for the higher attrition volume relative to the baseline LTV.
-                    </p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const inputs = ['currentMrr', 'currentChurn', 'mrrGain', 'newChurn'];
+        const inputs = ['currentMrr', 'currentChurn', 'mrrGain', 'spikeChurn', 'spikeDuration', 'steadyChurn'];
         const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
         function calculate() {
-            // Get values
+            // Inputs
             const curMRR = parseFloat(document.getElementById('currentMrr').value) || 0;
             const curChurn = (parseFloat(document.getElementById('currentChurn').value) || 0) / 100;
             const gain = parseFloat(document.getElementById('mrrGain').value) || 0;
-            const newChurn = (parseFloat(document.getElementById('newChurn').value) || 0) / 100;
+            const spikeChurn = (parseFloat(document.getElementById('spikeChurn').value) || 0) / 100;
+            const spikeDuration = parseFloat(document.getElementById('spikeDuration').value) || 1;
+            const steadyChurn = (parseFloat(document.getElementById('steadyChurn').value) || 0) / 100;
             
             const newMRR = curMRR + gain;
 
-            // 1. Baseline LTV
+            // 1. LTV Calculations
             const baselineLtv = curChurn > 0 ? (curMRR / curChurn) : 0;
-            
-            // 2. New LTV
-            const newLtv = newChurn > 0 ? (newMRR / newChurn) : 0;
+            const spikeLtv = spikeChurn > 0 ? (newMRR / spikeChurn) : 0;
+            const steadyLtv = steadyChurn > 0 ? (newMRR / steadyChurn) : 0;
 
-            // 3. LTV Impact
-            const impact = newLtv - baselineLtv;
+            // 2. Cumulative Attrition during window
+            // Compounding attrition: Base * (1 - churn)^months
+            const remainingBasePercent = Math.pow(1 - spikeChurn, spikeDuration);
+            const totalAttritionPercent = (1 - remainingBasePercent) * 100;
 
-            // 4. Breakeven Churn Rate
-            const breakevenChurn = baselineLtv > 0 ? (newMRR / baselineLtv) : 0;
+            // 3. Equity Delta (Steady State vs Baseline)
+            const equityDelta = baselineLtv > 0 ? ((steadyLtv - baselineLtv) / baselineLtv) * 100 : 0;
 
-            // 5. Growth Check
-            const targetNetAfter3Mo = newMRR * 1.06;
-            const churnDollarsPerMonth = newMRR * newChurn;
-            const monthlyGrossNeeded = ((targetNetAfter3Mo - newMRR) / 3) + churnDollarsPerMonth;
+            // 4. Breakeven Steady State Churn
+            const breakevenSteadyChurn = baselineLtv > 0 ? (newMRR / baselineLtv) : 0;
 
-            // 6. Reality Check Logic
-            const revExpansionMult = curMRR > 0 ? (newMRR / curMRR) : 1;
-            const churnInflationMult = curChurn > 0 ? (newChurn / curChurn) : 1;
-            
-            // Update UI Summary Metrics
+            // --- Update UI ---
             document.getElementById('baselineLtvDisplay').textContent = formatter.format(baselineLtv);
-            document.getElementById('newLtvDisplay').textContent = formatter.format(newLtv);
-            
-            const impactEl = document.getElementById('ltvImpactDisplay');
-            impactEl.textContent = (impact >= 0 ? '+' : '') + formatter.format(impact);
-            impactEl.className = `text-2xl font-bold ${impact >= 0 ? 'impact-positive' : 'impact-negative'}`;
+            document.getElementById('spikeLtvDisplay').textContent = formatter.format(spikeLtv);
+            document.getElementById('steadyLtvDisplay').textContent = formatter.format(steadyLtv);
 
-            // Update Reality Check UI
-            document.getElementById('revMultDisplay').textContent = revExpansionMult.toFixed(2) + 'x';
-            document.getElementById('churnMultDisplay').textContent = churnInflationMult.toFixed(2) + 'x';
-            
-            const scoreBadge = document.getElementById('realityScoreBadge');
-            const realitySummary = document.getElementById('realitySummary');
-            
-            if (churnInflationMult <= revExpansionMult) {
-                scoreBadge.className = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase w-fit mb-2 bg-green-100 text-green-700";
-                scoreBadge.textContent = "Capital Efficient";
-                realitySummary.textContent = "The revenue increase is outpacing churn growth. This is a high-confidence migration that builds long-term equity.";
-            } else if (churnInflationMult < (revExpansionMult * 1.5)) {
-                scoreBadge.className = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase w-fit mb-2 bg-amber-100 text-amber-700";
-                scoreBadge.textContent = "Aggressive";
-                realitySummary.textContent = "You are trading significant churn for revenue. While LTV might technically stay positive, you are accelerating your CAC payback pressure.";
+            // Attrition Bar
+            document.getElementById('attritionImpact').textContent = totalAttritionPercent.toFixed(1) + '%';
+            document.getElementById('attritionBar').style.width = Math.min(totalAttritionPercent, 100) + '%';
+
+            // Equity Delta
+            const eqEl = document.getElementById('equityDelta');
+            eqEl.textContent = (equityDelta >= 0 ? '+' : '') + equityDelta.toFixed(1) + '%';
+            eqEl.className = `font-bold text-lg ${equityDelta >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+            // Analyst View Text
+            const analystView = document.getElementById('analystView');
+            if (equityDelta > 0) {
+                analystView.textContent = `While the migration window will shake out ${totalAttritionPercent.toFixed(1)}% of your current accounts, the surviving cohort at $${newMRR.toLocaleString()} MRR yields a higher asset value. You recover the 'lost equity' as soon as the refresh completes.`;
             } else {
-                scoreBadge.className = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase w-fit mb-2 bg-red-100 text-red-700";
-                scoreBadge.textContent = "Toxic Expansion";
-                realitySummary.textContent = "Churn is growing over 1.5x faster than your revenue. You are essentially 'burning the furniture to keep the house warm.'";
+                analystView.textContent = `Structural Warning: Even after the spike ends, your steady-state churn of ${(steadyChurn*100).toFixed(1)}% is too high for the new price point. You are permanently reducing the capital value of your subscriber base.`;
             }
 
-            // Update Churn Tolerance UI
-            document.getElementById('breakevenDisplay').textContent = `Breakeven: ${(breakevenChurn * 100).toFixed(2)}%`;
+            // Risk Meter (Steady State)
+            document.getElementById('breakevenDisplay').textContent = (breakevenSteadyChurn * 100).toFixed(2) + '%';
             let riskPercent = 0;
-            if (breakevenChurn > 0) {
-                riskPercent = (newChurn / (breakevenChurn * 2)) * 100;
+            if (breakevenSteadyChurn > 0) {
+                riskPercent = (steadyChurn / (breakevenSteadyChurn * 2)) * 100;
                 riskPercent = Math.min(Math.max(riskPercent, 0), 100);
             }
             document.getElementById('riskPointer').style.left = `${riskPercent}%`;
-            document.getElementById('growthTargetDisplay').textContent = formatter.format(monthlyGrossNeeded);
 
-            // CPO Recommendation
+            // Final Recommendation
             const recCard = document.getElementById('recommendationCard');
-            const recText = document.getElementById('recommendationText');
-            
-            if (impact > 0) {
-                recCard.className = "p-4 rounded-lg bg-green-50 text-green-800 border border-green-200";
-                recText.textContent = `Proceed with Migration. The price increase outweighs the churn risk, resulting in a ${((impact/baselineLtv)*100).toFixed(1)}% expansion of your LTV. Focus on communicating value to the core base.`;
-            } else if (impact === 0) {
-                recCard.className = "p-4 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200";
-                recText.textContent = `Warning: Neutral LTV Impact. You are trading volume for revenue without expanding equity. Consider grandfathering legacy users to protect churn rates.`;
+            const recTitle = document.getElementById('recTitle');
+            const recBody = document.getElementById('recBody');
+            const recIcon = document.getElementById('recIcon');
+
+            if (equityDelta > 5) {
+                recCard.className = "mt-6 p-4 rounded-lg border border-green-200 bg-green-50 flex gap-4 items-start";
+                recTitle.className = "font-bold text-sm mb-1 text-green-800";
+                recTitle.textContent = "Green Light: Strategic Optimization";
+                recBody.textContent = `The temporary loss of ${totalAttritionPercent.toFixed(1)}% of your base is a healthy 'cleansing' of low-value accounts. Your steady-state LTV is improved.`;
+                recIcon.innerHTML = `<svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>`;
+            } else if (equityDelta > -5) {
+                recCard.className = "mt-6 p-4 rounded-lg border border-amber-200 bg-amber-50 flex gap-4 items-start";
+                recTitle.className = "font-bold text-sm mb-1 text-amber-800";
+                recTitle.textContent = "Yellow Light: Marginal Utility";
+                recBody.textContent = `The equity gain is negligible relative to the execution risk. The 'shock' to the brand may outweigh the minor LTV improvement.`;
+                recIcon.innerHTML = `<svg class="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>`;
             } else {
-                recCard.className = "p-4 rounded-lg bg-red-50 text-red-800 border border-red-200";
-                recText.textContent = `High Risk: Do Not Launch. The projected churn of ${(newChurn*100).toFixed(2)}% destroys more capital value than the gain provides. Improve product stickiness first.`;
+                recCard.className = "mt-6 p-4 rounded-lg border border-red-200 bg-red-50 flex gap-4 items-start";
+                recTitle.className = "font-bold text-sm mb-1 text-red-800";
+                recTitle.textContent = "Red Light: Destructive Migration";
+                recBody.textContent = `Abort. You are incurring a major spike in churn to arrive at a steady-state that is still weaker than your starting position.`;
+                recIcon.innerHTML = `<svg class="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>`;
             }
         }
 
