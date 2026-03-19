@@ -424,7 +424,6 @@
     <div class="section-sub">Toggle tiers in/out of the migration. Set churn risk % per tier — monthly accounts are assumed to decide within your window (1-3 mo), yearly accounts churn at their next annual renewal (12 mo). Upsell MRR is from your account data; discount applies to Medium/High/Extreme cohorts only.</div>
 
     <div class="card" style="padding: 20px;">
-      <div style="overflow-x: auto; overflow-y: clip;">
       <table class="cohort-builder" id="cohortTable">
         <thead>
           <tr>
@@ -456,7 +455,6 @@
           </tr>
         </tfoot>
       </table>
-      </div><!-- end overflow-x wrapper -->
 
       <div id="spikeVerdictBox" class="spike-verdict-box warn" style="margin-top:14px;">
         <strong id="spikeVerdictTitle">Assessing spike churn realism…</strong>
@@ -481,7 +479,7 @@
           <span><span class="legend-dot-circle" style="background:var(--navy);"></span>Year 2+ scenario</span>
         </div>
       </div>
-      <canvas id="simChart" style="max-height:180px;"></canvas>
+      <canvas id="simChart" style="max-height:220px;"></canvas>
     </div>
   </div>
 
