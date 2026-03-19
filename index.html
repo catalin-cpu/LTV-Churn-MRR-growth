@@ -481,7 +481,7 @@
           <span><span class="legend-dot-circle" style="background:var(--navy);"></span>Year 2+ scenario</span>
         </div>
       </div>
-      <canvas id="simChart" height="160"></canvas>
+      <canvas id="simChart" style="max-height:180px;"></canvas>
     </div>
   </div>
 
@@ -991,7 +991,7 @@ function updateSimChart(r) {
       {label:'Year 1 (discounted)',data:[{x:y1Upsell,y:spikeChurnPct}],type:'scatter',backgroundColor:y1Color,borderColor:y1Color,pointRadius:8,pointHoverRadius:10,order:0},
       {label:'Year 2+ (full price)',data:[{x:y2Upsell,y:spikeChurnPct}],type:'scatter',backgroundColor:y2Color,borderColor:y2Color,pointRadius:10,pointHoverRadius:12,order:1}
     ]},
-    options:{responsive:true,animation:false,interaction:{mode:'nearest',intersect:false},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'nearest',intersect:false},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
         if(ctx.datasetIndex===0)return`Max tolerable spike: ${ctx.parsed.y.toFixed(1)}% at ${fmtCur(ctx.parsed.x)} upsell`;
         const yr=ctx.datasetIndex===1?'Year 1':'Year 2+';
