@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SaaS LTV Migration Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy:    #0f2b46;
+      --teal:    #0e7c7b;
+      --teal-lt: #14a8a7;
+      --sky:     #e8f6f6;
+      --amber:   #f59e0b;
+      --green:   #10b981;
+      --red:     #ef4444;
+      --border:  #e2e8f0;
+      --bg:      #f8fafc;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --radius:  10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Inter, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; }
+
+    nav { background: rgba(15,43,70,0.97); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255,255,255,0.08); position: sticky; top: 0; z-index: 100; }
+    .nav-inner { max-width: 1140px; margin: 0 auto; padding: 0 1.5rem; height: 52px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { font-weight: 700; font-size: 15px; color: #fff; letter-spacing: -0.3px; }
+    .nav-logo span { color: var(--teal-lt); }
+    .nav-badge { background: rgba(14,124,123,0.25); border: 1px solid rgba(20,168,167,0.4); color: var(--teal-lt); padding: 3px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+
+    .page { max-width: 1140px; margin: 0 auto; padding: 0 1.5rem 80px; }
+
+    .hero { background: linear-gradient(135deg, var(--navy) 0%, #164e63 60%, var(--teal) 100%); padding: 52px 1.5rem 44px; text-align: center; color: #fff; margin-bottom: 40px; }
+    .hero-label { display: inline-block; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 100px; padding: 4px 16px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; color: var(--teal-lt); }
+    .hero h1 { font-size: clamp(1.7rem,4vw,2.6rem); font-weight: 800; letter-spacing: -0.8px; line-height: 1.2; max-width: 660px; margin: 0 auto 12px; }
+    .hero-sub { font-size: 16px; color: rgba(255,255,255,0.7); max-width: 560px; margin: 0 auto; }
+
+    .card { background: #fff; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .card-accent-navy  { border-top: 3px solid var(--navy); }
+    .card-accent-teal  { border-top: 3px solid var(--teal); }
+    .card-accent-amber { border-top: 3px solid var(--amber); }
+    .card-accent-green { border-top: 3px solid var(--green); }
+    .card-accent-red   { border-top: 3px solid var(--red); }
+
+    .two-col { display: grid; grid-template-columns: 390px 1fr; gap: 24px; align-items: start; }
+    @media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
+
+    .input-section { display: flex; flex-direction: column; gap: 20px; }
+    .card-header { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-navy  { background: var(--navy); }
+    .dot-teal  { background: var(--teal); }
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+    .label-note { font-weight: 400; font-style: italic; color: #94a3b8; font-size: 11px; }
+    .input-wrap { position: relative; }
+    .input-prefix { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; font-weight: 600; pointer-events: none; }
+    input[type="number"] { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 14px; font-family: Inter, sans-serif; outline: none; transition: border-color 0.15s, box-shadow 0.15s; color: var(--text); background: #fff; }
+    input[type="number"].has-prefix { padding-left: 22px; }
+    input[type="number"].has-suffix { padding-right: 22px; }
+    input[type="number"]:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(14,124,123,0.12); }
+    input[type="range"] { width: 100%; accent-color: var(--teal); height: 4px; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input[type="number"] { width: 72px; flex-shrink: 0; text-align: right; padding-right: 20px; }
+    .pct-suffix { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
+    .slider-wrap { flex: 1; }
+
+    /* Calculated display boxes */
+    .calc-box { background: #f1f5f9; border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; }
+    .calc-box-row { display: flex; align-items: baseline; gap: 10px; }
+    .calc-value { font-size: 1.5rem; font-weight: 800; color: var(--navy); letter-spacing: -0.8px; font-variant-numeric: tabular-nums; }
+    .calc-meta { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+    .calc-meta strong { color: var(--text); }
+    .billing-cycle-info { display: flex; gap: 8px; margin-top: 8px; }
+    .billing-pill { flex: 1; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 11px; text-align: center; }
+    .billing-pill .pill-label { color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; margin-bottom: 2px; }
+    .billing-pill .pill-val { font-weight: 700; color: var(--navy); font-size: 13px; }
+    .disc-note { font-size: 11.5px; color: var(--muted); background: var(--sky); border: 1px solid #a5f3f3; border-radius: 6px; padding: 5px 9px; margin-top: 6px; }
+
+    /* RESULTS */
+    .results-stack { display: flex; flex-direction: column; gap: 14px; }
+    .metric-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+    @media (max-width: 700px) { .metric-row { grid-template-columns: 1fr 1fr; } }
+    .metric-card { padding: 14px 16px; }
+    .metric-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 3px; }
+    .metric-value { font-size: 1.25rem; font-weight: 800; color: var(--navy); letter-spacing: -0.5px; }
+    .metric-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+    /* DELTA PANEL */
+    .delta-panel { padding: 18px 20px; }
+    .delta-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 560px) { .delta-cols { grid-template-columns: 1fr; } }
+    .delta-col-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; margin-bottom: 6px; }
+    .delta-col-label.y1 { color: var(--amber); }
+    .delta-col-label.y2 { color: var(--teal); }
+    .delta-big { font-size: 1.9rem; font-weight: 800; letter-spacing: -1px; }
+    .delta-positive { color: var(--green); }
+    .delta-neutral  { color: var(--amber); }
+    .delta-negative { color: var(--red); }
+    .delta-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .delta-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat { font-size: 12px; }
+    .stat-label { color: var(--muted); margin-bottom: 1px; }
+    .stat-value { font-weight: 700; color: var(--text); }
+
+    /* VERDICT */
+    .verdict { border-radius: 8px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 10px; }
+    .verdict-icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; }
+    .verdict-title { font-weight: 700; font-size: 13.5px; margin-bottom: 2px; }
+    .verdict-body { font-size: 12.5px; line-height: 1.55; }
+    .verdict-green { background: #ecfdf5; border: 1px solid #6ee7b7; }
+    .verdict-green .verdict-title { color: #065f46; }
+    .verdict-green .verdict-body { color: #047857; }
+    .verdict-amber { background: #fffbeb; border: 1px solid #fcd34d; }
+    .verdict-amber .verdict-title { color: #78350f; }
+    .verdict-amber .verdict-body { color: #92400e; }
+    .verdict-red { background: #fef2f2; border: 1px solid #fca5a5; }
+    .verdict-red .verdict-title { color: #7f1d1d; }
+    .verdict-red .verdict-body { color: #991b1b; }
+
+    /* INTERACTIVE COHORT TABLE */
+    .cohort-section { margin-top: 24px; }
+    .cohort-builder { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .cohort-builder th {
+      background: var(--navy); color: #fff; padding: 7px 10px;
+      text-align: left; font-weight: 600; font-size: 10.5px;
+      text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .cohort-builder th.r, .cohort-builder td.r { text-align: right; }
+    .cohort-group-header td {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.7px; padding: 6px 10px; border-bottom: none;
+    }
+    .cohort-tier-row td { padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .cohort-tier-row.dimmed { opacity: 0.45; }
+    .cohort-builder tfoot tr td {
+      font-weight: 700; font-size: 12px; padding: 9px 10px;
+      background: var(--navy); color: #fff; border-top: 2px solid #0f2b46;
+    }
+
+    /* Toggle switch */
+    .toggle-wrap { display: inline-flex; align-items: center; }
+    .toggle-cb { display: none; }
+    .toggle-lbl {
+      width: 30px; height: 17px; background: #cbd5e1; border-radius: 9px;
+      cursor: pointer; position: relative; transition: background 0.2s; display: block; flex-shrink: 0;
+    }
+    .toggle-lbl::after {
+      content: ''; width: 13px; height: 13px; background: #fff; border-radius: 50%;
+      position: absolute; top: 2px; left: 2px; transition: transform 0.2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    }
+    .toggle-cb:checked + .toggle-lbl { background: var(--teal); }
+    .toggle-cb:checked + .toggle-lbl::after { transform: translateX(13px); }
+
+    /* Tier & strategy badges */
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 100px; white-space: nowrap; }
+    .badge-starter    { background: #d1fae5; color: #065f46; }
+    .badge-growth     { background: #fef3c7; color: #92400e; }
+    .badge-pro        { background: #ffedd5; color: #9a3412; }
+    .badge-enterprise { background: #fee2e2; color: #7f1d1d; }
+
+    /* Churn input in table */
+    .churn-inp {
+      width: 50px; padding: 3px 5px; border: 1px solid var(--border);
+      border-radius: 5px; font-size: 11.5px; font-family: Inter, sans-serif;
+      text-align: right; outline: none; color: var(--text); background: #fff;
+    }
+    .churn-inp:focus { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(14,124,123,0.12); }
+    .churn-inp:disabled { background: #f8fafc; color: var(--muted); border-color: #e2e8f0; cursor: not-allowed; }
+    .mrr-at-risk { color: #c2410c; font-weight: 600; }
+    .upsell-cell { color: #065f46; font-weight: 600; }
+
+    .spike-verdict-box { margin-top: 14px; border-radius: 8px; padding: 12px 16px; font-size: 12.5px; }
+    .spike-verdict-box.ok    { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; }
+    .spike-verdict-box.warn  { background: #fffbeb; border: 1px solid #fcd34d; color: #78350f; }
+    .spike-verdict-box.risky { background: #fef2f2; border: 1px solid #fca5a5; color: #7f1d1d; }
+
+    /* CHART */
+    .chart-section { margin-top: 24px; }
+    .chart-wrap { padding: 20px 20px 14px; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .chart-title { font-size: 14px; font-weight: 700; color: var(--navy); }
+    .chart-legend { display: flex; gap: 14px; font-size: 11.5px; align-items: center; flex-wrap: wrap; }
+    .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+    .legend-green { background: rgba(16,185,129,0.35); }
+    .legend-red   { background: rgba(239,68,68,0.35); }
+    .legend-dot-circle { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+    .legend-y1 { background: var(--amber); }
+    .legend-y2 { background: var(--navy); }
+
+    /* SCENARIOS */
+    .scenarios-section { margin-top: 24px; }
+    .scenario-cards { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+    .scenario-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; min-width: 210px; flex-shrink: 0; }
+    .scenario-name-input { border: none; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700; color: var(--navy); width: 100%; margin-bottom: 10px; padding-bottom: 4px; outline: none; background: transparent; }
+    .scenario-name-input:focus { border-bottom-color: var(--teal); }
+    .scenario-mini { font-size: 11.5px; color: var(--muted); line-height: 1.85; }
+    .scenario-mini span { font-weight: 600; color: var(--text); }
+    .scenario-actions { display: flex; gap: 6px; margin-top: 10px; }
+    .btn-xs { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 5px; border: none; cursor: pointer; transition: opacity 0.15s; }
+    .btn-xs:hover { opacity: 0.8; }
+    .btn-load   { background: var(--sky); color: var(--teal); }
+    .btn-remove { background: #fee2e2; color: #b91c1c; }
+    .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px; }
+    .compare-table th { background: var(--navy); color: #fff; padding: 8px 10px; text-align: left; font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .compare-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+    .compare-table tr:nth-child(even) td { background: #f8fafc; }
+    .compare-table tr:last-child td { border-bottom: none; }
+
+    /* EXPORT */
+    .export-section { margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    .btn { font-family: Inter, sans-serif; font-weight: 600; font-size: 13px; padding: 9px 18px; border-radius: 7px; border: none; cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: inline-flex; align-items: center; gap: 7px; }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--teal); color: #fff; }
+    .btn-outline { background: #fff; color: var(--navy); border: 1.5px solid var(--border); }
+    .btn-save   { background: var(--navy); color: #fff; }
+
+    .breakeven-tag { display: inline-block; background: #fff7ed; border: 1px solid #fdba74; color: #c2410c; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 100px; margin-top: 4px; }
+    .breakeven-tag.hidden { display: none; }
+    .section-divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+    .eyebrow { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); margin-bottom: 6px; }
+    .section-title { font-size: 1.3rem; font-weight: 800; color: var(--navy); margin-bottom: 6px; letter-spacing: -0.3px; }
+    .section-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">SaaS<span>LTV</span> Calculator</div>
+    <div class="nav-badge">Migration Risk Model · TouchStay</div>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-label">LTV · Churn · MRR · Growth</div>
+  <h1>Is your migration worth the churn?</h1>
+  <p class="hero-sub">Model MRR decay, upsell uptake, and the Year 1 discount impact — then see whether your LTV genuinely improves.</p>
+</div>
+
+<div class="page">
+
+  <div class="two-col">
+
+    <!-- LEFT: INPUTS -->
+    <div class="input-section">
+
+      <!-- Baseline -->
+      <div class="card card-accent-navy" style="padding: 18px 20px;">
+        <div class="card-header"><span class="dot dot-navy"></span>Financial Baseline</div>
+
+        <div class="field">
+          <label for="currentMRR">Current MRR</label>
+          <div class="input-wrap">
+            <span class="input-prefix">$</span>
+            <input type="number" id="currentMRR" class="has-prefix" value="242000" min="0" step="1000">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="baselineChurnNum">Baseline Monthly Churn <span class="label-note">(stable / post-migration)</span></label>
+          <div class="slider-row">
+            <div class="slider-wrap"><input type="range" id="baselineChurnSlider" min="0.1" max="15" step="0.1" value="1.54"></div>
+            <div class="input-wrap" style="position:relative;">
+              <input type="number" id="baselineChurnNum" value="1.54" min="0.1" max="15" step="0.1">
+              <span class="pct-suffix">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Migration Event -->
+      <div class="card card-accent-teal" style="padding: 18px 20px;">
+        <div class="card-header"><span class="dot dot-teal"></span>Migration Event</div>
+
+        <!-- Calculated spike churn -->
+        <div class="field">
+          <label>Blended Spike Churn <span class="label-note">(from cohort table)</span></label>
+          <div class="calc-box">
+            <div class="calc-box-row">
+              <div class="calc-value" id="spikeChurnCalcDisplay">—</div>
+              <div class="calc-meta">
+                +<strong id="spikeExtraPct">—</strong> above baseline<br>
+                <strong id="spikeMrrAtRisk">—</strong> total MRR at risk
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly billing churn window -->
+        <div class="field">
+          <label for="monthlyWindowNum">Monthly billing churn window <span class="label-note">(months until decision)</span></label>
+          <div class="slider-row">
+            <div class="slider-wrap"><input type="range" id="monthlyWindowSlider" min="1" max="3" step="1" value="2"></div>
+            <div class="input-wrap" style="position:relative;">
+              <input type="number" id="monthlyWindowNum" value="2" min="1" max="3" step="1" style="width:60px;">
+              <span class="pct-suffix" style="right:7px;font-size:11px;">mo</span>
+            </div>
+          </div>
+          <!-- Billing cycle pills -->
+          <div class="billing-cycle-info">
+            <div class="billing-pill">
+              <div class="pill-label">Monthly accts</div>
+              <div class="pill-val" id="pillMonthly">—</div>
+            </div>
+            <div class="billing-pill">
+              <div class="pill-label">Yearly accts (at renewal)</div>
+              <div class="pill-val" id="pillYearly">—</div>
+            </div>
+            <div class="billing-pill" style="background:#f1f5f9;">
+              <div class="pill-label">Effective window</div>
+              <div class="pill-val" id="pillNeff" style="color:var(--teal);">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calculated upsell MRR -->
+        <div class="field">
+          <label>Upsell MRR <span class="label-note">(from included cohorts)</span></label>
+          <div class="calc-box">
+            <div class="calc-box-row">
+              <div class="calc-value" id="upsellCalcDisplay">—</div>
+              <div class="calc-meta" id="upsellCalcMeta">full-price Y2+</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Discount -->
+        <div class="field">
+          <label for="discountPct">First-Year Discount <span class="label-note">(Medium / High / Extreme cohorts)</span></label>
+          <div class="input-wrap" style="position:relative;">
+            <input type="number" id="discountPct" class="has-suffix" value="20" min="0" max="100" step="1">
+            <span class="pct-suffix">%</span>
+          </div>
+          <div class="disc-note">Y1 upsell: <strong id="y1UpsellNote">—</strong> · Y2+: <strong id="y2UpsellNote">—</strong></div>
+        </div>
+
+        <div style="margin-top:16px; display:flex; gap:8px;">
+          <button class="btn btn-save" onclick="saveScenario()">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"/></svg>
+            Save Scenario
+          </button>
+          <button class="btn btn-outline" onclick="resetInputs()">Reset</button>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- RIGHT: RESULTS -->
+    <div class="results-stack">
+
+      <div class="metric-row">
+        <div class="card card-accent-navy metric-card">
+          <div class="metric-label">Pre-Migration LTV</div>
+          <div class="metric-value" id="preLTVDisplay">—</div>
+          <div class="metric-sub">Before migration</div>
+        </div>
+        <div class="card card-accent-amber metric-card">
+          <div class="metric-label">Year 1 LTV</div>
+          <div class="metric-value" id="y1LTVDisplay">—</div>
+          <div class="metric-sub" id="y1MRRSub">Discounted upsell</div>
+        </div>
+        <div class="card card-accent-teal metric-card">
+          <div class="metric-label">Year 2+ LTV</div>
+          <div class="metric-value" id="y2LTVDisplay">—</div>
+          <div class="metric-sub">Full-price upsell</div>
+        </div>
+        <div class="card metric-card" id="deltaCard">
+          <div class="metric-label">Y2 LTV Delta</div>
+          <div class="metric-value" id="ltvDeltaDisplay">—</div>
+          <div class="metric-sub" id="ltvDeltaPct">—</div>
+        </div>
+      </div>
+
+      <div class="card delta-panel">
+        <div class="delta-cols">
+          <div>
+            <div class="delta-col-label y1">Year 1 (discounted)</div>
+            <div class="delta-big" id="deltaY1">—</div>
+            <div class="delta-sub" id="deltaY1Sub">—</div>
+            <span class="breakeven-tag" id="breakevenTagY1"></span>
+          </div>
+          <div>
+            <div class="delta-col-label y2">Year 2+ (full price)</div>
+            <div class="delta-big" id="deltaY2">—</div>
+            <div class="delta-sub" id="deltaY2Sub">—</div>
+            <span class="breakeven-tag" id="breakevenTagY2"></span>
+          </div>
+        </div>
+        <hr class="delta-divider">
+        <div class="stats-grid">
+          <div class="stat"><div class="stat-label">MRR lost to spike churn</div><div class="stat-value" id="statChurnedMRR">—</div></div>
+          <div class="stat"><div class="stat-label">Survival rate (end of window)</div><div class="stat-value" id="statSurvival">—</div></div>
+          <div class="stat"><div class="stat-label">Year 1 upsell (discounted)</div><div class="stat-value" id="statY1Upsell">—</div></div>
+          <div class="stat"><div class="stat-label">Year 2+ upsell (full price)</div><div class="stat-value" id="statY2Upsell">—</div></div>
+        </div>
+      </div>
+
+      <div id="verdictBox" class="verdict verdict-green" role="status" aria-live="polite">
+        <svg id="verdictIcon" class="verdict-icon" fill="currentColor" viewBox="0 0 20 20"></svg>
+        <div>
+          <div class="verdict-title" id="verdictTitle">—</div>
+          <div class="verdict-body" id="verdictBody">—</div>
+        </div>
+      </div>
+
+    </div><!-- /right -->
+  </div><!-- /two-col -->
+
+  <!-- INTERACTIVE COHORT RISK BUILDER -->
+  <div class="cohort-section">
+    <hr class="section-divider">
+    <div class="eyebrow">Migration Analysis · 9,727 accounts · $238,986 MRR</div>
+    <div class="section-title">Cohort churn risk builder</div>
+    <div class="section-sub">Toggle tiers in/out of the migration. Set churn risk % per tier — monthly accounts are assumed to decide within your window (1-3 mo), yearly accounts churn at their next annual renewal (12 mo). Upsell MRR is from your account data; discount applies to Medium/High/Extreme cohorts only.</div>
+    <div class="card" style="padding: 20px; overflow-x: auto;">
+      <table class="cohort-builder" id="cohortTable">
+        <thead>
+          <tr>
+            <th style="width:32px;">On</th>
+            <th>Cohort / Tier</th>
+            <th>Strategy</th>
+            <th class="r">Accts</th>
+            <th class="r">MRR (mo)</th>
+            <th class="r">MRR (yr)</th>
+            <th class="r">Churn risk</th>
+            <th class="r">MRR at risk</th>
+            <th class="r">Upsell MRR</th>
+          </tr>
+        </thead>
+        <tbody id="cohortTbody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3">Included totals</td>
+            <td class="r" id="ftAccts">—</td>
+            <td class="r" id="ftMrrM">—</td>
+            <td class="r" id="ftMrrY">—</td>
+            <td class="r" id="ftSpikeLabel" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.75;">Spike churn</td>
+            <td class="r" id="ftRisk">—</td>
+            <td class="r" id="ftUpsell">—</td>
+          </tr>
+          <tr>
+            <td colspan="7" style="font-size:10px;opacity:0.75;text-transform:uppercase;letter-spacing:0.5px;">Blended spike = baseline + monthly extra rate + yearly amortised</td>
+            <td class="r" colspan="2" id="ftSpike" style="font-size:1rem;letter-spacing:-0.3px;">—</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div id="spikeVerdictBox" class="spike-verdict-box warn" style="margin-top:14px;">
+        <strong id="spikeVerdictTitle">Assessing spike churn realism…</strong>
+        <span id="spikeVerdictBody"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-section">
+    <hr class="section-divider">
+    <div class="eyebrow">Tolerance Simulation</div>
+    <div class="section-title">Max acceptable spike churn vs upsell MRR</div>
+    <div class="section-sub">The curve shows the maximum spike churn you can tolerate for a given upsell target before LTV decreases. Year 1 (amber dot) uses discounted upsell — Year 2+ (navy dot) uses full price. Both dots are at your current calculated values.</div>
+    <div class="card chart-wrap">
+      <div class="chart-header">
+        <div class="chart-title">Spike Churn Tolerance Curve</div>
+        <div class="chart-legend">
+          <span><span class="legend-dot legend-green"></span>LTV improves</span>
+          <span><span class="legend-dot legend-red"></span>LTV decreases</span>
+          <span><span class="legend-dot-circle legend-y1"></span>Year 1 scenario</span>
+          <span><span class="legend-dot-circle" style="background:var(--navy);"></span>Year 2+ scenario</span>
+        </div>
+      </div>
+      <canvas id="simChart" height="260"></canvas>
+    </div>
+  </div>
+
+  <!-- SCENARIOS -->
+  <div class="scenarios-section" id="scenariosSection" style="display:none;">
+    <hr class="section-divider">
+    <div class="eyebrow">Scenario Comparison</div>
+    <div class="section-title" style="margin-bottom:12px;">Saved Scenarios</div>
+    <div class="scenario-cards" id="scenarioCards"></div>
+    <div id="compareTableWrap" style="overflow-x:auto;"></div>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="export-section">
+    <button class="btn btn-outline" onclick="exportText()">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+      Export Summary (.txt)
+    </button>
+    <button class="btn btn-primary" onclick="exportCSV()">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+      Export CSV
+    </button>
+  </div>
+
+</div>
+
+<script>
+// ─── COHORT × TIER DATA (from Migration_Analysis.xlsx) ────────────────────────
+// churnRisk: single % — applied to monthly billing at full rate, yearly at renewal
+// upsellMRR: MRR-proportional share of cohort total upsell (from Total Upsell Cost col)
+// Discount cohorts: medium, high, extreme → 20% Y1 discount applied to their upsell only
+const COHORT_DATA = [
+  { id:'excluded', label:'0-Excluded', strategy:'Free upgrade', strategyColor:'#10b981', strategyBg:'#ecfdf5', discounted:false,
+    tiers:[
+      { tier:'Starter',    accts:36,  mrrM:5723,  mrrY:2208, churnRisk:0,   upsellMRR:0,     included:true  },
+      { tier:'Growth',     accts:2,   mrrM:199,   mrrY:0,    churnRisk:0,   upsellMRR:0,     included:true  },
+      { tier:'Pro',        accts:2,   mrrM:258,   mrrY:534,  churnRisk:0,   upsellMRR:0,     included:true  },
+      { tier:'Enterprise', accts:43,  mrrM:17513, mrrY:7259, churnRisk:0,   upsellMRR:0,     included:true  },
+    ]},
+  { id:'negligible', label:'1-Negligible', strategy:'Feature trial + gate', strategyColor:'#3b82f6', strategyBg:'#dbeafe', discounted:false,
+    tiers:[
+      { tier:'Starter',    accts:125, mrrM:979,   mrrY:566,  churnRisk:3,   upsellMRR:162,   included:true  },
+    ]},
+  { id:'low', label:'2-Low', strategy:'Feature trial + gate', strategyColor:'#3b82f6', strategyBg:'#dbeafe', discounted:false,
+    tiers:[
+      { tier:'Starter',    accts:814, mrrM:9206,  mrrY:844,  churnRisk:3,   upsellMRR:1880,  included:true  },
+      { tier:'Growth',     accts:2,   mrrM:70,    mrrY:31,   churnRisk:2,   upsellMRR:19,    included:true  },
+      { tier:'Pro',        accts:117, mrrM:6491,  mrrY:17299,churnRisk:1,   upsellMRR:4452,  included:true  },
+      { tier:'Enterprise', accts:29,  mrrM:1859,  mrrY:9594, churnRisk:0.5, upsellMRR:2143,  included:true  },
+    ]},
+  { id:'medium', label:'3-Medium', strategy:'20% disc · 1yr', strategyColor:'#f59e0b', strategyBg:'#fef3c7', discounted:true,
+    tiers:[
+      { tier:'Starter',    accts:4540, mrrM:6609,  mrrY:35156,churnRisk:4,   upsellMRR:16796, included:true  },
+      { tier:'Growth',     accts:128,  mrrM:3484,  mrrY:1571, churnRisk:3,   upsellMRR:2034,  included:true  },
+      { tier:'Pro',        accts:184,  mrrM:10351, mrrY:12466,churnRisk:2,   upsellMRR:9172,  included:true  },
+      { tier:'Enterprise', accts:5,    mrrM:1387,  mrrY:1574, churnRisk:1,   upsellMRR:1192,  included:true  },
+    ]},
+  { id:'high', label:'4-High', strategy:'20% disc · 1yr', strategyColor:'#f97316', strategyBg:'#ffedd5', discounted:true,
+    tiers:[
+      { tier:'Starter',    accts:2004, mrrM:261,   mrrY:25476,churnRisk:6,   upsellMRR:16511, included:true  },
+      { tier:'Growth',     accts:1150, mrrM:12180, mrrY:29044,churnRisk:5,   upsellMRR:26448, included:true  },
+      { tier:'Pro',        accts:91,   mrrM:8369,  mrrY:1304, churnRisk:3,   upsellMRR:6205,  included:true  },
+      { tier:'Enterprise', accts:2,    mrrM:0,     mrrY:452,  churnRisk:1.5, upsellMRR:290,   included:false },
+    ]},
+  { id:'extreme', label:'5-Extreme', strategy:'20% disc · 1yr', strategyColor:'#ef4444', strategyBg:'#fee2e2', discounted:true,
+    tiers:[
+      { tier:'Starter',    accts:183,  mrrM:111,   mrrY:1357, churnRisk:12,  upsellMRR:3042,  included:true  },
+      { tier:'Growth',     accts:223,  mrrM:728,   mrrY:3337, churnRisk:10,  upsellMRR:8424,  included:true  },
+      { tier:'Pro',        accts:38,   mrrM:619,   mrrY:1260, churnRisk:7,   upsellMRR:3896,  included:true  },
+      { tier:'Enterprise', accts:9,    mrrM:0,     mrrY:1255, churnRisk:4,   upsellMRR:2600,  included:false },
+    ]},
+];
+
+// Snapshot defaults for reset
+const DEFAULTS = COHORT_DATA.map(c => c.tiers.map(t => ({ churnRisk:t.churnRisk, included:t.included })));
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const scenarios = [];
+let lastResult = null;
+const MAX_SCENARIOS = 5;
+const YEARLY_WINDOW = 12; // yearly accounts churn at annual renewal
+
+// ─── FORMATTERS ───────────────────────────────────────────────────────────────
+const fmtCur = v => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(v);
+const fmtPct = (v,d=1) => (v>=0?'+':'')+v.toFixed(d)+'%';
+const fmtK   = v => v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+Math.round(v);
+
+// ─── TIER BADGE ───────────────────────────────────────────────────────────────
+function tierBadge(tier) {
+  const map = {Starter:'badge-starter',Growth:'badge-growth',Pro:'badge-pro',Enterprise:'badge-enterprise'};
+  return `<span class="badge ${map[tier]||'badge-starter'}">${tier}</span>`;
+}
+
+// ─── BILLING CYCLE SPIKE CALCULATION ─────────────────────────────────────────
+// Monthly billing: full churn risk applies each month for monthlyWindow months
+// Yearly billing:  full churn risk materialises at annual renewal (amortised over 12 mo)
+// spike % = baseline + (Σ mrrM×risk%)/currentMRR + (Σ mrrY×risk%/12)/currentMRR
+function calcSpike(baselineChurnPct, monthlyWindow) {
+  const W = monthlyWindow;
+  const currentMRR = parseFloat(document.getElementById('currentMRR').value) || 242000;
+
+  let totalMrrM_incl = 0, totalMrrY_incl = 0;
+  let extraRateM = 0, extraRateY = 0;
+  let totalMrrAtRisk = 0, totalUpsellFull = 0, totalUpsellY1 = 0;
+  const discountPct = parseFloat(document.getElementById('discountPct').value) || 0;
+
+  for (const cohort of COHORT_DATA) {
+    for (const t of cohort.tiers) {
+      if (!t.included) continue;
+      totalMrrM_incl += t.mrrM;
+      totalMrrY_incl += t.mrrY;
+      // Monthly: rate per month
+      extraRateM += (t.mrrM * t.churnRisk / 100) / currentMRR;
+      // Yearly: full risk at renewal → amortise over 12 mo
+      extraRateY += (t.mrrY * t.churnRisk / 100) / (currentMRR * YEARLY_WINDOW);
+      // Total MRR at risk = monthly losses over window + yearly loss at renewal
+      totalMrrAtRisk += (t.mrrM * t.churnRisk / 100) * W + (t.mrrY * t.churnRisk / 100);
+      // Upsell
+      const disc = cohort.discounted ? discountPct / 100 : 0;
+      totalUpsellFull += t.upsellMRR;
+      totalUpsellY1   += t.upsellMRR * (1 - disc);
+    }
+  }
+
+  const spikeChurnPct = baselineChurnPct + (extraRateM + extraRateY) * 100;
+
+  // Effective window = MRR-weighted blend of monthly and yearly windows
+  const totalMRR = totalMrrM_incl + totalMrrY_incl;
+  const N_eff = totalMRR > 0
+    ? (totalMrrM_incl * W + totalMrrY_incl * YEARLY_WINDOW) / totalMRR
+    : W;
+
+  return {
+    spikeChurnPct, N_eff, totalMrrAtRisk,
+    totalUpsellFull, totalUpsellY1,
+    totalMrrM_incl, totalMrrY_incl,
+  };
+}
+
+// ─── RENDER COHORT TABLE ──────────────────────────────────────────────────────
+function renderCohortTable(W, discountPct) {
+  const tbody = document.getElementById('cohortTbody');
+  tbody.innerHTML = '';
+
+  let sumAccts=0, sumMrrM=0, sumMrrY=0, sumRisk=0, sumUpsell=0;
+
+  COHORT_DATA.forEach((cohort, ci) => {
+    // Group header
+    const gRow = document.createElement('tr');
+    gRow.className = 'cohort-group-header';
+    gRow.innerHTML = `<td colspan="9" style="background:${cohort.strategyBg};color:${cohort.strategyColor};border-left:3px solid ${cohort.strategyColor};">${cohort.label}</td>`;
+    tbody.appendChild(gRow);
+
+    cohort.tiers.forEach((t, ti) => {
+      const mrrAtRisk = t.included
+        ? (t.mrrM * t.churnRisk / 100) * W + (t.mrrY * t.churnRisk / 100)
+        : 0;
+      const disc = cohort.discounted ? discountPct / 100 : 0;
+      const upsellY1 = t.upsellMRR * (1 - disc);
+
+      if (t.included) {
+        sumAccts  += t.accts;
+        sumMrrM   += t.mrrM;
+        sumMrrY   += t.mrrY;
+        sumRisk   += mrrAtRisk;
+        sumUpsell += t.upsellMRR;
+      }
+
+      const uid = `${ci}_${ti}`;
+      const isZeroChurn = cohort.id === 'excluded';
+      const tr = document.createElement('tr');
+      tr.className = 'cohort-tier-row' + (t.included ? '' : ' dimmed');
+      tr.id = `row_${uid}`;
+      tr.innerHTML = `
+        <td>
+          <div class="toggle-wrap">
+            <input type="checkbox" class="toggle-cb" id="tog_${uid}" ${t.included?'checked':''}
+              onchange="toggleTier(${ci},${ti},this.checked)">
+            <label class="toggle-lbl" for="tog_${uid}"></label>
+          </div>
+        </td>
+        <td>${tierBadge(t.tier)}</td>
+        <td><span class="badge" style="background:${cohort.strategyBg};color:${cohort.strategyColor};">${cohort.strategy}</span></td>
+        <td class="r">${t.accts.toLocaleString()}</td>
+        <td class="r">${fmtK(t.mrrM)}</td>
+        <td class="r">${fmtK(t.mrrY)}</td>
+        <td class="r">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px;">
+            <input type="number" class="churn-inp" id="cr_${uid}" value="${t.churnRisk}"
+              min="0" max="50" step="0.5" ${isZeroChurn?'disabled':''}
+              onchange="updateChurnRisk(${ci},${ti},this.value)">
+            <span style="font-size:11px;color:var(--muted);">%</span>
+          </div>
+        </td>
+        <td class="r mrr-at-risk">${t.included&&mrrAtRisk>0?fmtK(mrrAtRisk):'—'}</td>
+        <td class="r upsell-cell">${t.upsellMRR>0?fmtK(cohort.discounted?upsellY1:t.upsellMRR)+'<span style="color:var(--muted);font-weight:400;font-size:10px;"> /mo</span>':'—'}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // Footer
+  document.getElementById('ftAccts').textContent = sumAccts.toLocaleString();
+  document.getElementById('ftMrrM').textContent   = fmtCur(sumMrrM);
+  document.getElementById('ftMrrY').textContent   = fmtCur(sumMrrY);
+  document.getElementById('ftRisk').textContent   = fmtCur(sumRisk);
+  document.getElementById('ftUpsell').textContent = fmtCur(sumUpsell);
+}
+
+// ─── TOGGLE / UPDATE ─────────────────────────────────────────────────────────
+function toggleTier(ci, ti, checked) {
+  COHORT_DATA[ci].tiers[ti].included = checked;
+  const row = document.getElementById(`row_${ci}_${ti}`);
+  if (row) row.classList.toggle('dimmed', !checked);
+  calculate();
+}
+function updateChurnRisk(ci, ti, val) {
+  COHORT_DATA[ci].tiers[ti].churnRisk = parseFloat(val) || 0;
+  calculate();
+}
+
+// ─── SYNC SLIDERS ─────────────────────────────────────────────────────────────
+function syncSlider(sliderId, numId) {
+  const s = document.getElementById(sliderId), n = document.getElementById(numId);
+  s.addEventListener('input', () => { n.value = s.value; calculate(); });
+  n.addEventListener('input', () => { s.value = n.value; calculate(); });
+}
+syncSlider('baselineChurnSlider', 'baselineChurnNum');
+syncSlider('monthlyWindowSlider', 'monthlyWindowNum');
+
+// ─── CALCULATE ────────────────────────────────────────────────────────────────
+function calculate() {
+  const currentMRR      = parseFloat(document.getElementById('currentMRR').value)      || 0;
+  const baselineChurnPct= parseFloat(document.getElementById('baselineChurnNum').value) || 0;
+  const monthlyWindow   = parseInt(document.getElementById('monthlyWindowNum').value)   || 2;
+  const discountPct     = parseFloat(document.getElementById('discountPct').value)      || 0;
+
+  const spike = calcSpike(baselineChurnPct, monthlyWindow);
+  const { spikeChurnPct, N_eff, totalMrrAtRisk, totalUpsellFull, totalUpsellY1,
+          totalMrrM_incl, totalMrrY_incl } = spike;
+  const y2Upsell = totalUpsellFull;
+  const y1Upsell = totalUpsellY1;
+
+  // Update spike display
+  const extraPct = spikeChurnPct - baselineChurnPct;
+  document.getElementById('spikeChurnCalcDisplay').textContent = spikeChurnPct.toFixed(2) + '%';
+  document.getElementById('spikeExtraPct').textContent = extraPct.toFixed(2) + '%';
+  document.getElementById('spikeMrrAtRisk').textContent = fmtCur(totalMrrAtRisk);
+
+  // Billing cycle pills
+  document.getElementById('pillMonthly').textContent = `${monthlyWindow} mo window`;
+  document.getElementById('pillYearly').textContent  = `12 mo (fixed)`;
+  document.getElementById('pillNeff').textContent    = `${N_eff.toFixed(1)} mo`;
+
+  // Upsell display
+  document.getElementById('upsellCalcDisplay').textContent = fmtCur(y2Upsell) + '/mo';
+  document.getElementById('upsellCalcMeta').textContent    = 'full-price Y2+';
+  document.getElementById('y1UpsellNote').textContent      = fmtCur(y1Upsell);
+  document.getElementById('y2UpsellNote').textContent      = fmtCur(y2Upsell);
+
+  // Render cohort table
+  renderCohortTable(monthlyWindow, discountPct);
+  updateSpikeVerdictBox(spikeChurnPct, baselineChurnPct);
+
+  const ftSpike = document.getElementById('ftSpike');
+  ftSpike.innerHTML = `<strong>${spikeChurnPct.toFixed(2)}%</strong> spike`;
+
+  if (baselineChurnPct === 0 || currentMRR === 0) return;
+
+  const baselineChurn = baselineChurnPct / 100;
+  const spikeChurn    = spikeChurnPct    / 100;
+
+  // Pre-migration LTV
+  const preLTV = currentMRR / baselineChurn;
+
+  // MRR decay over effective window
+  let remainingMRR = currentMRR;
+  const N_round = Math.round(N_eff);
+  for (let m = 0; m < N_round; m++) remainingMRR *= (1 - spikeChurn);
+  const churnedMRR   = currentMRR - remainingMRR;
+  const survivalRate = remainingMRR / currentMRR;
+
+  // Year 1 LTV (discounted upsell)
+  const postMRR_Y1 = remainingMRR + y1Upsell;
+  const postLTV_Y1 = postMRR_Y1 / baselineChurn;
+  const delta_Y1   = postLTV_Y1 - preLTV;
+  const deltaPct_Y1 = (delta_Y1 / preLTV) * 100;
+
+  // Year 2+ LTV (full upsell)
+  const postMRR_Y2 = remainingMRR + y2Upsell;
+  const postLTV_Y2 = postMRR_Y2 / baselineChurn;
+  const delta_Y2   = postLTV_Y2 - preLTV;
+  const deltaPct_Y2 = (delta_Y2 / preLTV) * 100;
+
+  const beY1 = (delta_Y1 < 0 && postMRR_Y1 > currentMRR) ? Math.ceil(-delta_Y1 / (postMRR_Y1 - currentMRR)) : null;
+  const beY2 = (delta_Y2 < 0 && postMRR_Y2 > currentMRR) ? Math.ceil(-delta_Y2 / (postMRR_Y2 - currentMRR)) : null;
+
+  lastResult = { currentMRR, baselineChurnPct, spikeChurnPct, monthlyWindow, N_eff, discountPct,
+                 y1Upsell, y2Upsell, preLTV, postMRR_Y1, postMRR_Y2, postLTV_Y1, postLTV_Y2,
+                 delta_Y1, delta_Y2, deltaPct_Y1, deltaPct_Y2, churnedMRR, survivalRate, beY1, beY2 };
+  updateUI(lastResult);
+  updateSimChart(lastResult);
+}
+
+// ─── UPDATE UI ────────────────────────────────────────────────────────────────
+function verdictClass(deltaPct) {
+  if (deltaPct > 0)   return 'positive';
+  if (deltaPct >= -5) return 'neutral';
+  return 'negative';
+}
+
+function updateUI(r) {
+  document.getElementById('preLTVDisplay').textContent = fmtCur(r.preLTV);
+  document.getElementById('y1LTVDisplay').textContent  = fmtCur(r.postLTV_Y1);
+  document.getElementById('y1MRRSub').textContent      = `MRR ${fmtCur(r.postMRR_Y1)}`;
+  document.getElementById('y2LTVDisplay').textContent  = fmtCur(r.postLTV_Y2);
+
+  const vc2 = verdictClass(r.deltaPct_Y2);
+  const deltaCard = document.getElementById('deltaCard');
+  deltaCard.className = 'card metric-card card-accent-'+(vc2==='positive'?'green':vc2==='neutral'?'amber':'red');
+  document.getElementById('ltvDeltaDisplay').textContent = fmtCur(Math.abs(r.delta_Y2));
+  document.getElementById('ltvDeltaDisplay').style.color = vc2==='positive'?'var(--green)':vc2==='neutral'?'var(--amber)':'var(--red)';
+  document.getElementById('ltvDeltaPct').textContent = fmtPct(r.deltaPct_Y2)+' '+(vc2==='positive'?'▲':vc2==='neutral'?'▶':'▼');
+
+  const vc1 = verdictClass(r.deltaPct_Y1);
+  const dy1 = document.getElementById('deltaY1');
+  dy1.textContent = (r.delta_Y1>=0?'+':'')+fmtCur(r.delta_Y1);
+  dy1.className = 'delta-big delta-'+vc1;
+  document.getElementById('deltaY1Sub').textContent = fmtPct(r.deltaPct_Y1)+' vs pre-migration';
+
+  const t1 = document.getElementById('breakevenTagY1');
+  if (r.beY1!==null){t1.textContent=`~${r.beY1}mo to break even`;t1.classList.remove('hidden');}
+  else if(r.delta_Y1<0&&r.postMRR_Y1<=r.currentMRR){t1.textContent='No break-even path';t1.classList.remove('hidden');}
+  else{t1.classList.add('hidden');}
+
+  const dy2 = document.getElementById('deltaY2');
+  dy2.textContent = (r.delta_Y2>=0?'+':'')+fmtCur(r.delta_Y2);
+  dy2.className = 'delta-big delta-'+verdictClass(r.deltaPct_Y2);
+  document.getElementById('deltaY2Sub').textContent = fmtPct(r.deltaPct_Y2)+' vs pre-migration';
+
+  const t2 = document.getElementById('breakevenTagY2');
+  if (r.beY2!==null){t2.textContent=`~${r.beY2}mo to break even`;t2.classList.remove('hidden');}
+  else if(r.delta_Y2<0&&r.postMRR_Y2<=r.currentMRR){t2.textContent='No break-even path';t2.classList.remove('hidden');}
+  else{t2.classList.add('hidden');}
+
+  document.getElementById('statChurnedMRR').textContent = fmtCur(r.churnedMRR);
+  document.getElementById('statSurvival').textContent   = (r.survivalRate*100).toFixed(1)+'%';
+  document.getElementById('statY1Upsell').textContent   = fmtCur(r.y1Upsell);
+  document.getElementById('statY2Upsell').textContent   = fmtCur(r.y2Upsell);
+
+  const box=document.getElementById('verdictBox'), icon=document.getElementById('verdictIcon'),
+        title=document.getElementById('verdictTitle'), body=document.getElementById('verdictBody');
+
+  const nStr = `${r.N_eff.toFixed(1)}-month`;
+  if (vc2==='positive'){
+    box.className='verdict verdict-green';
+    icon.innerHTML=`<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>`;
+    title.textContent='Green Light — Migration improves LTV';
+    body.textContent=`After the ${nStr} effective window (${fmtCur(r.churnedMRR)} churned MRR), Year 2+ LTV of ${fmtCur(r.postLTV_Y2)} exceeds pre-migration ${fmtCur(r.preLTV)}. Year 1 is ${vc1==='positive'?'also positive':'lower due to the '+r.discountPct+'% discount'} — steps up to full value when the discount expires.`;
+  } else if (vc2==='neutral'){
+    box.className='verdict verdict-amber';
+    icon.innerHTML=`<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>`;
+    title.textContent='Yellow Light — LTV roughly neutral at full price (±5%)';
+    body.textContent=`Near-wash at full pricing. ${r.discountPct}% discount makes Year 1 worse — increase upsell coverage or reduce churn risk estimates to clear the breakeven line.`;
+  } else {
+    box.className='verdict verdict-red';
+    icon.innerHTML=`<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>`;
+    title.textContent='Red Light — Migration damages LTV even at full price';
+    body.textContent=`Churned ${fmtCur(r.churnedMRR)} during the ${nStr} window. Full-price upsell of ${fmtCur(r.y2Upsell)} doesn't recover it — Y2+ LTV is ${Math.abs(r.deltaPct_Y2).toFixed(1)}% below baseline. Exclude high-risk Enterprise tiers or reduce churn risk estimates.`;
+  }
+}
+
+// ─── SPIKE VERDICT BOX ────────────────────────────────────────────────────────
+function updateSpikeVerdictBox(spikeChurnPct, baselineChurnPct) {
+  const box=document.getElementById('spikeVerdictBox'),
+        title=document.getElementById('spikeVerdictTitle'),
+        body=document.getElementById('spikeVerdictBody');
+  let included=0, total=0;
+  for(const c of COHORT_DATA) for(const t of c.tiers){total+=t.accts;if(t.included)included+=t.accts;}
+  const pct=Math.round(included/total*100);
+  const extra=(spikeChurnPct-baselineChurnPct).toFixed(2);
+  if(spikeChurnPct<=baselineChurnPct+0.3){
+    box.className='spike-verdict-box ok';
+    title.textContent=`✓ Minimal spike — essentially baseline churn`;
+    body.textContent=` Only +${extra}% above baseline for ${included.toLocaleString()} included accounts (${pct}% of total). Verify churn risk inputs are realistic.`;
+  } else if(spikeChurnPct<=2.5){
+    box.className='spike-verdict-box ok';
+    title.textContent=`✓ Realistic — conservative estimate`;
+    body.textContent=` ${spikeChurnPct.toFixed(2)}% spike (+${extra}%) across ${included.toLocaleString()} accounts (${pct}% of total). Achievable with the protective strategies in place.`;
+  } else if(spikeChurnPct<=5.0){
+    box.className='spike-verdict-box warn';
+    title.textContent=`⚠ Moderate risk — monitor closely`;
+    body.textContent=` ${spikeChurnPct.toFixed(2)}% blended spike (+${extra}%) for ${included.toLocaleString()} accounts (${pct}%). Consider excluding high-risk Enterprise tiers or phasing the rollout.`;
+  } else {
+    box.className='spike-verdict-box risky';
+    title.textContent=`✗ High spike risk — review cohort selection`;
+    body.textContent=` ${spikeChurnPct.toFixed(2)}% spike (+${extra}%) is aggressive. Exclude high-risk tiers or stagger across multiple migration waves.`;
+  }
+}
+
+// ─── SIMULATION CHART ─────────────────────────────────────────────────────────
+let simChart = null;
+function updateSimChart(r) {
+  const { currentMRR, spikeChurnPct, N_eff, y1Upsell, y2Upsell } = r;
+  const N = N_eff;
+  const STEPS = 80;
+  const xMax = Math.max(currentMRR * 0.25, y2Upsell * 2.5, 5000);
+  const yMax = Math.min(30, Math.max(spikeChurnPct * 2.5, 15));
+
+  const curvePoints = [];
+  for (let i=0;i<=STEPS;i++){
+    const u=(i/STEPS)*xMax;
+    const maxSpike = u>=currentMRR ? yMax : Math.min((1-Math.pow(1-u/currentMRR,1/N))*100,yMax);
+    curvePoints.push({x:u,y:maxSpike});
+  }
+  const curveAt = u => u>=currentMRR?yMax:Math.min((1-Math.pow(1-u/currentMRR,1/N))*100,yMax);
+
+  const y1Safe=spikeChurnPct<=curveAt(y1Upsell), y2Safe=spikeChurnPct<=curveAt(y2Upsell);
+  const y1Color=y1Safe?'#f59e0b':'#ef4444', y2Color=y2Safe?'#0e7c7b':'#7f1d1d';
+
+  const zonePlugin={id:'zoneShading',beforeDatasetsDraw(chart){
+    const {ctx,chartArea:{bottom,top}}=chart, meta=chart.getDatasetMeta(0);
+    if(!meta.data.length)return;
+    const pts=meta.data; ctx.save();
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); pts.forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.lineTo(pts[pts.length-1].x,bottom); ctx.lineTo(pts[0].x,bottom); ctx.closePath();
+    ctx.fillStyle='rgba(16,185,129,0.09)'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(pts[0].x,top); pts.forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.lineTo(pts[pts.length-1].x,top); ctx.closePath();
+    ctx.fillStyle='rgba(239,68,68,0.07)'; ctx.fill(); ctx.restore();
+  }};
+
+  if(simChart){
+    simChart.data.datasets[0].data=curvePoints;
+    simChart.data.datasets[1].data=[{x:y1Upsell,y:spikeChurnPct}];
+    simChart.data.datasets[1].backgroundColor=y1Color; simChart.data.datasets[1].borderColor=y1Color;
+    simChart.data.datasets[2].data=[{x:y2Upsell,y:spikeChurnPct}];
+    simChart.data.datasets[2].backgroundColor=y2Color; simChart.data.datasets[2].borderColor=y2Color;
+    simChart.options.scales.x.max=xMax; simChart.options.scales.y.max=yMax;
+    simChart.update('none'); return;
+  }
+  simChart=new Chart(document.getElementById('simChart'),{
+    type:'scatter', data:{datasets:[
+      {label:'Breakeven boundary',data:curvePoints,type:'line',borderColor:'#0f2b46',borderWidth:2,pointRadius:0,fill:false,tension:0.35,order:2},
+      {label:'Year 1 (discounted)',data:[{x:y1Upsell,y:spikeChurnPct}],type:'scatter',backgroundColor:y1Color,borderColor:y1Color,pointRadius:8,pointHoverRadius:10,order:0},
+      {label:'Year 2+ (full price)',data:[{x:y2Upsell,y:spikeChurnPct}],type:'scatter',backgroundColor:y2Color,borderColor:y2Color,pointRadius:10,pointHoverRadius:12,order:1}
+    ]},
+    options:{responsive:true,animation:false,interaction:{mode:'nearest',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
+        if(ctx.datasetIndex===0)return`Max tolerable spike: ${ctx.parsed.y.toFixed(1)}% at ${fmtCur(ctx.parsed.x)} upsell`;
+        const yr=ctx.datasetIndex===1?'Year 1':'Year 2+';
+        const safe=ctx.parsed.y<=curveAt(ctx.parsed.x);
+        return[`${yr} — spike: ${ctx.parsed.y.toFixed(1)}%`,`upsell: ${fmtCur(ctx.parsed.x)}`,safe?'✓ LTV improves':'✗ LTV decreases'];
+      }}}},
+      scales:{
+        x:{type:'linear',min:0,max:xMax,title:{display:true,text:'Upsell MRR Target ($)',font:{family:'Inter',size:11,weight:'600'},color:'#64748b'},grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{family:'Inter',size:11},color:'#94a3b8',callback:v=>'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)}},
+        y:{type:'linear',min:0,max:yMax,title:{display:true,text:'Spike Churn Rate (%)',font:{family:'Inter',size:11,weight:'600'},color:'#64748b'},grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{family:'Inter',size:11},color:'#94a3b8',callback:v=>v.toFixed(0)+'%'}}
+      }
+    },plugins:[zonePlugin]
+  });
+}
+
+// ─── SCENARIOS ────────────────────────────────────────────────────────────────
+function saveScenario(){
+  if(!lastResult)return;
+  if(scenarios.length>=MAX_SCENARIOS){alert(`Max ${MAX_SCENARIOS} scenarios.`);return;}
+  const r=lastResult;
+  scenarios.push({id:Date.now(),label:`Scenario ${scenarios.length+1}`,
+    snap:{currentMRR:r.currentMRR,baselineChurnPct:r.baselineChurnPct,spikeChurnPct:r.spikeChurnPct,
+          monthlyWindow:r.monthlyWindow,N_eff:r.N_eff,discountPct:r.discountPct,
+          y1Upsell:r.y1Upsell,y2Upsell:r.y2Upsell},
+    res:{preLTV:r.preLTV,postLTV_Y1:r.postLTV_Y1,postLTV_Y2:r.postLTV_Y2,
+         delta_Y1:r.delta_Y1,delta_Y2:r.delta_Y2,deltaPct_Y1:r.deltaPct_Y1,deltaPct_Y2:r.deltaPct_Y2,churnedMRR:r.churnedMRR}
+  });
+  renderScenarios();
+}
+function renderScenarios(){
+  const section=document.getElementById('scenariosSection');
+  section.style.display=scenarios.length?'block':'none';
+  const cards=document.getElementById('scenarioCards'); cards.innerHTML='';
+  scenarios.forEach((s,i)=>{
+    const vc2=verdictClass(s.res.deltaPct_Y2);
+    const col=vc2==='positive'?'#10b981':vc2==='neutral'?'#f59e0b':'#ef4444';
+    const card=document.createElement('div'); card.className='scenario-card';
+    card.innerHTML=`
+      <input class="scenario-name-input" type="text" value="${s.label}" oninput="scenarios[${i}].label=this.value">
+      <div class="scenario-mini">
+        MRR: <span>${fmtCur(s.snap.currentMRR)}</span> · Spike: <span>${s.snap.spikeChurnPct.toFixed(2)}%</span><br>
+        N_eff: <span>${s.snap.N_eff.toFixed(1)}mo</span> · Disc: <span>${s.snap.discountPct}%</span><br>
+        Y1 LTV: <span>${fmtCur(s.res.postLTV_Y1)}</span> → Y2: <span>${fmtCur(s.res.postLTV_Y2)}</span><br>
+        Y2 Δ: <span style="color:${col}">${(s.res.delta_Y2>=0?'+':'')+fmtCur(s.res.delta_Y2)} (${fmtPct(s.res.deltaPct_Y2)})</span>
+      </div>
+      <div class="scenario-actions">
+        <button class="btn-xs btn-remove" onclick="removeScenario(${i})">Remove</button>
+      </div>`;
+    cards.appendChild(card);
+  });
+  const tw=document.getElementById('compareTableWrap');
+  if(scenarios.length>=2){
+    const cols=scenarios.map(s=>`<th>${s.label}</th>`).join('');
+    const row=(lbl,fn)=>`<tr><td style="font-weight:600;white-space:nowrap">${lbl}</td>${scenarios.map(s=>`<td>${fn(s)}</td>`).join('')}</tr>`;
+    const vc=pct=>verdictClass(pct)==='positive'?'#10b981':verdictClass(pct)==='neutral'?'#f59e0b':'#ef4444';
+    tw.innerHTML=`<table class="compare-table"><thead><tr><th>Metric</th>${cols}</tr></thead><tbody>
+      ${row('Current MRR',s=>fmtCur(s.snap.currentMRR))}
+      ${row('Spike Churn',s=>s.snap.spikeChurnPct.toFixed(2)+'%')}
+      ${row('Eff. Window',s=>s.snap.N_eff.toFixed(1)+'mo')}
+      ${row('Discount Y1',s=>s.snap.discountPct+'%')}
+      ${row('Upsell Y2 MRR',s=>fmtCur(s.snap.y2Upsell))}
+      ${row('Pre-Migration LTV',s=>fmtCur(s.res.preLTV))}
+      ${row('Year 1 LTV',s=>fmtCur(s.res.postLTV_Y1))}
+      ${row('Year 2+ LTV',s=>fmtCur(s.res.postLTV_Y2))}
+      ${row('Y1 LTV Δ',s=>`<span style="color:${vc(s.res.deltaPct_Y1)}">${(s.res.delta_Y1>=0?'+':'')+fmtCur(s.res.delta_Y1)}</span>`)}
+      ${row('Y2 LTV Δ',s=>`<span style="color:${vc(s.res.deltaPct_Y2)}">${(s.res.delta_Y2>=0?'+':'')+fmtCur(s.res.delta_Y2)} (${fmtPct(s.res.deltaPct_Y2)})</span>`)}
+    </tbody></table>`;
+  } else { tw.innerHTML=''; }
+}
+function removeScenario(i){scenarios.splice(i,1);renderScenarios();}
+
+// ─── RESET ────────────────────────────────────────────────────────────────────
+function resetInputs(){
+  document.getElementById('currentMRR').value          = 242000;
+  document.getElementById('baselineChurnNum').value    = 1.54;
+  document.getElementById('baselineChurnSlider').value = 1.54;
+  document.getElementById('monthlyWindowNum').value    = 2;
+  document.getElementById('monthlyWindowSlider').value = 2;
+  document.getElementById('discountPct').value         = 20;
+  COHORT_DATA.forEach((c,ci)=>c.tiers.forEach((t,ti)=>{
+    t.churnRisk=DEFAULTS[ci][ti].churnRisk;
+    t.included =DEFAULTS[ci][ti].included;
+  }));
+  calculate();
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function download(content,filename,mime){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function exportCSV(){
+  if(!lastResult)return;
+  const r=lastResult, q=v=>`"${String(v).replace(/"/g,'""')}"`;
+  const rows=[
+    ['SaaS LTV Migration Calculator — TouchStay'],[],
+    ['INPUTS'],
+    ['Current MRR',r.currentMRR],
+    ['Baseline Churn %',r.baselineChurnPct],
+    ['Blended Spike Churn % (calculated)',r.spikeChurnPct.toFixed(2)],
+    ['Monthly Billing Churn Window (months)',r.monthlyWindow],
+    ['Yearly Billing Window (months)',YEARLY_WINDOW],
+    ['Effective Migration Window (months)',r.N_eff.toFixed(1)],
+    ['Discount %',r.discountPct],
+    ['Upsell MRR Y1 (discounted)',r.y1Upsell.toFixed(2)],
+    ['Upsell MRR Y2+ (full price)',r.y2Upsell.toFixed(2)],[],
+    ['RESULTS'],
+    ['Pre-Migration LTV',r.preLTV.toFixed(2)],
+    ['Year 1 MRR',r.postMRR_Y1.toFixed(2)],['Year 1 LTV',r.postLTV_Y1.toFixed(2)],
+    ['Year 1 LTV Delta $',r.delta_Y1.toFixed(2)],['Year 1 LTV Delta %',r.deltaPct_Y1.toFixed(2)],
+    ['Year 2+ MRR',r.postMRR_Y2.toFixed(2)],['Year 2+ LTV',r.postLTV_Y2.toFixed(2)],
+    ['Year 2+ LTV Delta $',r.delta_Y2.toFixed(2)],['Year 2+ LTV Delta %',r.deltaPct_Y2.toFixed(2)],
+    ['Churned MRR',r.churnedMRR.toFixed(2)],['Survival Rate',(r.survivalRate*100).toFixed(2)+'%'],[],
+    ['COHORT DETAIL'],
+    ['Cohort','Tier','Included','Accounts','MRR Monthly','MRR Yearly','Churn Risk %','Upsell MRR'],
+  ];
+  COHORT_DATA.forEach(c=>c.tiers.forEach(t=>rows.push([c.label,t.tier,t.included?'Yes':'No',t.accts,t.mrrM,t.mrrY,t.churnRisk,t.upsellMRR])));
+  download(rows.map(r=>r.map(q).join(',')).join('\n'),'ltv-migration-calculator.csv','text/csv');
+}
+function exportText(){
+  if(!lastResult)return;
+  const r=lastResult;
+  const v=r.delta_Y2>0?'GREEN — LTV Improved':Math.abs(r.deltaPct_Y2)<=5?'YELLOW — LTV Neutral':'RED — LTV Decreased';
+  let rows='';
+  COHORT_DATA.forEach(c=>c.tiers.forEach(t=>{
+    if(t.included)rows+=`  ${c.label} / ${t.tier}: ${t.accts} accts | $${t.mrrM} mo-MRR | $${t.mrrY} yr-MRR | ${t.churnRisk}% risk | $${t.upsellMRR} upsell\n`;
+  }));
+  download(`SaaS LTV Migration Calculator — TouchStay
+==========================================
+Generated: ${new Date().toLocaleString()}
+
+INPUTS
+  Current MRR:                ${fmtCur(r.currentMRR)}
+  Baseline monthly churn:     ${r.baselineChurnPct}%
+  Blended spike churn:        ${r.spikeChurnPct.toFixed(2)}% (calculated)
+  Monthly billing window:     ${r.monthlyWindow} months
+  Yearly billing window:      ${YEARLY_WINDOW} months (at renewal)
+  Effective migration window: ${r.N_eff.toFixed(1)} months
+  First-year discount:        ${r.discountPct}% (Medium/High/Extreme only)
+  Upsell MRR Y1:              ${fmtCur(r.y1Upsell)}
+  Upsell MRR Y2+:             ${fmtCur(r.y2Upsell)}
+
+RESULTS
+  Pre-migration LTV:          ${fmtCur(r.preLTV)}
+  Year 1 LTV:                 ${fmtCur(r.postLTV_Y1)}  (${fmtPct(r.deltaPct_Y1)})
+  Year 2+ LTV:                ${fmtCur(r.postLTV_Y2)}  (${fmtPct(r.deltaPct_Y2)})
+  Churned MRR (window):       ${fmtCur(r.churnedMRR)}
+  Survival rate:              ${(r.survivalRate*100).toFixed(1)}%
+
+VERDICT: ${v}
+
+INCLUDED COHORT / TIER BREAKDOWN
+${rows}`.trim(),'ltv-migration-summary.txt','text/plain');
+}
+
+// ─── WIRE UP ──────────────────────────────────────────────────────────────────
+['currentMRR','discountPct'].forEach(id=>
+  document.getElementById(id).addEventListener('input',calculate)
+);
+calculate();
+</script>
+</body>
+</html>
