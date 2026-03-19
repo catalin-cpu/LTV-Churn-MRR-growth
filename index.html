@@ -465,7 +465,7 @@
             <th class="r">Accts</th>
             <th class="r">MRR (mo)</th>
             <th class="r">MRR (yr)</th>
-            <th class="r">Churn risk</th>
+            <th class="r">Churn during migration</th>
             <th class="r">MRR at risk</th>
             <th class="r">Upsell MRR</th>
           </tr>
@@ -606,9 +606,9 @@ function tierBadge(tier) {
 }
 
 // ─── BILLING CYCLE SPIKE CALCULATION ─────────────────────────────────────────
-// Monthly billing: full churn risk applies each month for monthlyWindow months
-// Yearly billing:  full churn risk materialises at annual renewal (amortised over 12 mo)
-// spike % = baseline + (Σ mrrM×risk%)/currentMRR + (Σ mrrY×risk%/12)/currentMRR
+// Monthly billing: churn risk = total % of accounts leaving during the window (spread as monthly rate = risk% ÷ W)
+// Yearly billing:  churn risk materialises at annual renewal (amortised over 12 mo)
+// spike % = baseline + (Σ mrrM×risk%)/(currentMRR×W) + (Σ mrrY×risk%)/(currentMRR×12)
 function calcSpike(baselineChurnPct, monthlyWindow) {
   const W = monthlyWindow;
   const currentMRR = parseFloat(document.getElementById('currentMRR').value) || 242000;
@@ -623,12 +623,12 @@ function calcSpike(baselineChurnPct, monthlyWindow) {
       if (!t.included) continue;
       totalMrrM_incl += t.mrrM;
       totalMrrY_incl += t.mrrY;
-      // Monthly: rate per month
-      extraRateM += (t.mrrM * t.churnRisk / 100) / currentMRR;
+      // Monthly: total risk spread over W months → extra monthly rate = risk% ÷ W
+      extraRateM += (t.mrrM * t.churnRisk / 100) / (currentMRR * W);
       // Yearly: full risk at renewal → amortise over 12 mo
       extraRateY += (t.mrrY * t.churnRisk / 100) / (currentMRR * YEARLY_WINDOW);
-      // Total MRR at risk = monthly losses over window + yearly loss at renewal
-      totalMrrAtRisk += (t.mrrM * t.churnRisk / 100) * W + (t.mrrY * t.churnRisk / 100);
+      // Total MRR at risk = one-time monthly loss + one-time yearly loss at renewal
+      totalMrrAtRisk += (t.mrrM * t.churnRisk / 100) + (t.mrrY * t.churnRisk / 100);
       // Upsell
       const disc = cohort.discounted ? discountPct / 100 : 0;
       totalUpsellFull += t.upsellMRR;
@@ -667,7 +667,7 @@ function renderCohortTable(W, discountPct) {
 
     cohort.tiers.forEach((t, ti) => {
       const mrrAtRisk = t.included
-        ? (t.mrrM * t.churnRisk / 100) * W + (t.mrrY * t.churnRisk / 100)
+        ? (t.mrrM + t.mrrY) * t.churnRisk / 100
         : 0;
       const disc = cohort.discounted ? discountPct / 100 : 0;
       const upsellY1 = t.upsellMRR * (1 - disc);
