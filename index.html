@@ -601,8 +601,14 @@ const fmtK   = v => v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+Math.round(v);
 
 // ─── TIER BADGE ───────────────────────────────────────────────────────────────
 function tierBadge(tier) {
-  const map = {Starter:'badge-starter',Growth:'badge-growth',Pro:'badge-pro',Enterprise:'badge-enterprise'};
-  return `<span class="badge ${map[tier]||'badge-starter'}">${tier}</span>`;
+  const map = {
+    'Starter':    { cls:'badge-starter',    label:'Starter (1–3 GB)'    },
+    'Growth':     { cls:'badge-growth',     label:'Growth (4–20 GB)'    },
+    'Pro':        { cls:'badge-pro',        label:'Pro (21–100 GB)'     },
+    'Enterprise': { cls:'badge-enterprise', label:'Enterprise (>100 GB)' },
+  };
+  const info = map[tier] || { cls:'badge-starter', label: tier };
+  return `<span class="badge ${info.cls}">${info.label}</span>`;
 }
 
 // ─── BILLING CYCLE SPIKE CALCULATION ─────────────────────────────────────────
@@ -659,10 +665,29 @@ function renderCohortTable(W, discountPct) {
   let sumAccts=0, sumMrrM=0, sumMrrY=0, sumRisk=0, sumUpsell=0;
 
   COHORT_DATA.forEach((cohort, ci) => {
-    // Group header
+    // Group header — label spans cols 0-5, churn input in col 6, empty cols 7-8
+    const isExcluded = cohort.id === 'excluded';
+    const cohortAvg  = cohortAvgChurn(ci);
     const gRow = document.createElement('tr');
     gRow.className = 'cohort-group-header';
-    gRow.innerHTML = `<td colspan="9" style="background:${cohort.strategyBg};color:${cohort.strategyColor};border-left:3px solid ${cohort.strategyColor};">${cohort.label}</td>`;
+    gRow.innerHTML = `
+      <td colspan="6" style="background:${cohort.strategyBg};color:${cohort.strategyColor};border-left:3px solid ${cohort.strategyColor};font-weight:700;">
+        ${cohort.label}
+        <span style="font-size:10px;font-weight:500;opacity:0.75;margin-left:8px;">${cohort.strategy}</span>
+      </td>
+      <td class="r" style="background:${cohort.strategyBg};">
+        ${isExcluded
+          ? `<span style="font-size:11px;color:var(--muted);">0% (fixed)</span>`
+          : `<div style="display:flex;align-items:center;justify-content:flex-end;gap:3px;">
+              <input type="number" class="churn-inp" id="cohort_cr_${ci}" value="${cohortAvg.toFixed(1)}"
+                min="0" max="50" step="0.5"
+                onchange="setCohortChurn(${ci},this.value)"
+                title="Set all tiers in this cohort to the same churn rate">
+              <span style="font-size:11px;color:var(--muted);">%</span>
+             </div>`
+        }
+      </td>
+      <td colspan="2" style="background:${cohort.strategyBg};"></td>`;
     tbody.appendChild(gRow);
 
     cohort.tiers.forEach((t, ti) => {
@@ -727,8 +752,35 @@ function toggleTier(ci, ti, checked) {
   if (row) row.classList.toggle('dimmed', !checked);
   calculate();
 }
+// MRR-weighted average churn across all tiers in a cohort (included or not)
+function cohortAvgChurn(ci) {
+  const tiers = COHORT_DATA[ci].tiers;
+  let totalMRR = 0, weighted = 0;
+  tiers.forEach(t => {
+    const mrr = t.mrrM + t.mrrY;
+    totalMRR += mrr;
+    weighted += mrr * t.churnRisk;
+  });
+  return totalMRR > 0 ? weighted / totalMRR : 0;
+}
+
+// Set all tiers in a cohort to the same rate → push to child inputs
+function setCohortChurn(ci, val) {
+  const v = parseFloat(val) || 0;
+  COHORT_DATA[ci].tiers.forEach((t, ti) => {
+    t.churnRisk = v;
+    const inp = document.getElementById(`cr_${ci}_${ti}`);
+    if (inp) inp.value = v;
+  });
+  calculate();
+}
+
 function updateChurnRisk(ci, ti, val) {
   COHORT_DATA[ci].tiers[ti].churnRisk = parseFloat(val) || 0;
+  // Sync cohort header to MRR-weighted average of all tiers
+  const avg = cohortAvgChurn(ci);
+  const hdr = document.getElementById(`cohort_cr_${ci}`);
+  if (hdr) hdr.value = avg.toFixed(1);
   calculate();
 }
 
