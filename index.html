@@ -422,39 +422,6 @@
     <div class="section-title">Cohort churn risk builder</div>
     <div class="section-sub">Toggle tiers in/out of the migration. Set churn risk % per tier — monthly accounts are assumed to decide within your window (1-3 mo), yearly accounts churn at their next annual renewal (12 mo). Upsell MRR is from your account data; discount applies to Medium/High/Extreme cohorts only.</div>
 
-    <!-- Risk category definitions -->
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;gap:7px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:6px 12px;font-size:11.5px;">
-        <span style="font-weight:700;color:#065f46;">0-Excluded</span>
-        <span style="color:#047857;">% increase &lt; 0% — already overcharged, free upgrade</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:7px;background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:6px 12px;font-size:11.5px;">
-        <span style="font-weight:700;color:#1e40af;">1-Negligible</span>
-        <span style="color:#1d4ed8;">GB qty &lt; 2 — tiny footprint, minimal impact</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:7px;background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:6px 12px;font-size:11.5px;">
-        <span style="font-weight:700;color:#1e40af;">2-Low</span>
-        <span style="color:#1d4ed8;">0% &lt; % increase ≤ 30%</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:7px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:6px 12px;font-size:11.5px;">
-        <span style="font-weight:700;color:#92400e;">3-Medium</span>
-        <span style="color:#78350f;">30% &lt; % increase &lt; 50%</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:7px;background:#ffedd5;border:1px solid #fdba74;border-radius:8px;padding:6px 12px;font-size:11.5px;">
-        <span style="font-weight:700;color:#9a3412;">4-High</span>
-        <span style="color:#7c2d12;">50% ≤ % increase &lt; 100%</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:7px;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:6px 12px;font-size:11.5px;">
-        <span style="font-weight:700;color:#7f1d1d;">5-Extreme</span>
-        <span style="color:#991b1b;">% increase ≥ 100% — price doubles or more</span>
-      </div>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:16px;padding:6px 10px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;">
-      <strong style="color:var(--text);">Formula:</strong>
-      IF(% inc &lt; 0 → Excluded) · IF(GB qty &lt; 2 → Negligible) · IF(% inc ≤ 30% → Low) · IF(% inc &lt; 50% → Medium) · IF(% inc &lt; 100% → High) · else Extreme
-      &nbsp;·&nbsp; <strong style="color:var(--text);">% increase</strong> = (IF on Growth Plan − MRR in USD) ÷ MRR in USD
-    </div>
-
     <div class="card" style="padding: 20px; overflow-x: auto;">
       <table class="cohort-builder" id="cohortTable">
         <thead>
@@ -664,16 +631,27 @@ function renderCohortTable(W, discountPct) {
 
   let sumAccts=0, sumMrrM=0, sumMrrY=0, sumRisk=0, sumUpsell=0;
 
+  const COHORT_DEFS = {
+    excluded:   '% increase &lt; 0 — already overcharged',
+    negligible: 'GB qty &lt; 2 — tiny footprint',
+    low:        '0% &lt; % increase ≤ 30%',
+    medium:     '30% &lt; % increase &lt; 50%',
+    high:       '50% ≤ % increase &lt; 100%',
+    extreme:    '% increase ≥ 100% — price doubles or more',
+  };
+
   COHORT_DATA.forEach((cohort, ci) => {
     // Group header — label spans cols 0-5, churn input in col 6, empty cols 7-8
     const isExcluded = cohort.id === 'excluded';
     const cohortAvg  = cohortAvgChurn(ci);
+    const def = COHORT_DEFS[cohort.id] || '';
     const gRow = document.createElement('tr');
     gRow.className = 'cohort-group-header';
     gRow.innerHTML = `
       <td colspan="6" style="background:${cohort.strategyBg};color:${cohort.strategyColor};border-left:3px solid ${cohort.strategyColor};font-weight:700;">
         ${cohort.label}
-        <span style="font-size:10px;font-weight:500;opacity:0.75;margin-left:8px;">${cohort.strategy}</span>
+        <span style="font-size:10.5px;font-weight:400;opacity:0.8;margin-left:10px;">${def}</span>
+        <span style="font-size:10px;font-weight:500;opacity:0.6;margin-left:10px;">· ${cohort.strategy}</span>
       </td>
       <td class="r" style="background:${cohort.strategyBg};">
         ${isExcluded
